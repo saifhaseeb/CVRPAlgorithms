@@ -5,6 +5,7 @@ from tkinter import messagebox
 import os.path
 import operator
 import math
+import time
 from ortools.constraint_solver import pywrapcp
 from ortools.constraint_solver import routing_enums_pb2
 #import tabu
@@ -14,17 +15,32 @@ import random
 def getNum(text):
     return int(''.join(ele for ele in text if ele.isdigit() or ele == '.'))
 
-def findLargestNumber(text):
-    ls = list()
-    for w in text.split():
-        try:
-            ls.append(int(w))
-        except:
-            pass
-    try:
-        return max(ls)
-    except:
-        return None
+def eucDistance(x1, y1, x2, y2):
+    dist = math.sqrt((int(x2) - int(x1)) ** 2 + (int(y2) - int(y1)) ** 2)
+    return dist
+
+def manDistance(x1, y1, x2, y2):
+    # Manhattan distance
+    dist = abs(x1 - x2) + abs(y1 - y2)
+
+    return dist
+
+def calcRouteDist(route,system):
+
+    totalDist = 0
+    for i in range(0,len(route)):
+        for j in range(0,len(route[i])-2):
+            #print('i:' + str(i))
+            #print('j' + str(j))
+            #print('route: ' + str(route[i][j]))
+            x1 = system[route[i][j]-1][1]
+            y1 = system[route[i][j]-1][2]
+            x2 = system[route[i][j+1]-1][1]
+            y2 = system[route[i][j+1]-1][2]
+
+            totalDist += eucDistance(x1,y1,x2,y2)
+
+    print(totalDist)
 
 def openFile():
 
@@ -45,55 +61,17 @@ def openFile():
         system = buildCoords(content,totalnodes)
         heuritic(system)
 
+        calcRouteDist(routes_huer, system)
+
         metaheuristic(system)
         print(routes_meta)
+        calcRouteDist(routes_meta, system)
 
         exact(system)
 
+        calcRouteDist(routes_exact, system)
         print(routes_exact)
 
-
-def getGridSize(content):
-
-    #print('Raj')
-    flag = False
-    i = 0
-    k = len(content)
-    largestnumberArray = []
-
-    while not flag:
-        while i < k:
-
-            if content[i] == 'EOF':
-                flag = True
-
-            if content[i][0].isdigit():
-                largestnumber = findLargestNumber(content[i])
-                largestnumberArray.append(largestnumber)
-                i += 1
-
-            else:
-                i += 1
-
-        largestCoordinate = max(largestnumberArray)
-
-    x = 0
-
-    if largestCoordinate < 10000:
-        x = 10000
-
-    if largestCoordinate < 1000:
-        x = 1000
-
-    if largestCoordinate > 100:
-        x = 100
-
-    return x
-
-def createGrid():
-
-    x = [['.' for i in range(getGridSize())] for j in range(getGridSize())]
-    return x
 
 def buildCoords(content,totalnodes):
     system = []
@@ -122,7 +100,6 @@ def buildCoords(content,totalnodes):
     return system
 
 
-
 def getDemand(content):
     i = 0
     k = len(content)
@@ -131,9 +108,83 @@ def getDemand(content):
             return  i
         i += 1
 
+
 def heuritic(system):
+
     global capacityLimit
-    global routes
+    global routes_huer
+
+    def mergeFeasibility(routes, nodeA, nodeB, routeA, routeB):
+        global capacityLimit
+
+        # if not in same route
+        if routeA != routeB:
+            if routes[routeA] != "null" and routes[routeB] != "null":
+                # if capacity of the 2 routes is under the limit
+                if int(routes[routeA][-1]) + int(routes[routeB][-1]) <= capacityLimit:
+                    # if node a is at the start or end
+                    if routes[routeA][1] == nodeA or routes[routeA][-3] == nodeA:
+                        # if node b is at the start or end
+                        if routes[routeB][1] == nodeB or routes[routeB][-3] == nodeB:
+                            return True
+
+        return False
+
+    def mergeRoutes(routes, routeA, routeB, nodeA, nodeB, locationA, locationB):
+
+        # merge a into b
+        # if A is on the left
+        if nodeA == routes[routeA][1]:
+            # if b is on the right
+            if nodeB == routes[routeB][-3]:
+                # print("al,br")
+                j = 0
+                while j <= len(routes[routeA]) - 4:
+                    routes[routeB].insert(locationB + 1 + j, routes[routeA][locationA + j])
+                    # print(routes)
+                    j += 1
+                routes[routeB][-1] += routes[routeA][-1]
+                routes[routeA] = 'null'
+                # print(routes[routeB])
+
+            # if b is on the left
+            elif nodeB == routes[routeB][1]:
+                # print("aL,bL")
+                j = 0
+                while j <= len(routes[routeA]) - 4:
+                    routes[routeB].insert(1, routes[routeA][locationA + j])
+                    # print(routes)
+                    j += 1
+                routes[routeB][-1] += routes[routeA][-1]
+                routes[routeA] = 'null'
+                # print(routes[routeB])
+
+        # if A is on the right
+        if nodeA == routes[routeA][-3]:
+            # if b is on the right
+            if nodeB == routes[routeB][-3]:
+                # print("aR,bR")
+                j = 0
+                while j <= len(routes[routeA]) - 4:
+                    routes[routeB].insert(locationB + 1 + j, routes[routeA][locationA - j])
+                    # print(routes)
+                    j += 1
+                routes[routeB][-1] += routes[routeA][-1]
+                routes[routeA] = 'null'
+                # print(routes[routeB])
+            # if b is on the left
+            elif nodeB == routes[routeB][1]:
+                # print("aR,bL")
+                j = 0
+                # print(routeA)
+                while j <= len(routes[routeA]) - 4:
+                    routes[routeB].insert(1, routes[routeA][locationA - j])
+                    j += 1
+                routes[routeB][-1] += routes[routeA][-1]
+                routes[routeA] = 'null'
+                # print(routes[routeB])
+
+    start = time.clock()
     depotX = system[0][1]
     depotY = system[0][2]
 
@@ -162,9 +213,9 @@ def heuritic(system):
             nodejy = system[j][2]
 
 
-            d1 = calcDist(depotX,depotY,nodeix,nodeiy)
-            d2 = calcDist(depotX,depotY,nodejx,nodejy)
-            d3 = calcDist(nodeix,nodeiy,nodejx,nodejy)
+            d1 = eucDistance(depotX,depotY,nodeix,nodeiy)
+            d2 = eucDistance(depotX,depotY,nodejx,nodejy)
+            d3 = eucDistance(nodeix,nodeiy,nodejx,nodejy)
 
 
             savingscalc = 0
@@ -207,98 +258,26 @@ def heuritic(system):
 
         if mergeFeasibility(routes,nodeA,nodeB,routeA,routeB):
 
-            mergeRoutes(routeA,routeB,nodeA,nodeB,locationA,locationB)
+            mergeRoutes(routes,routeA,routeB,nodeA,nodeB,locationA,locationB)
 
 
         i += 1
 
     strippedRoutes = list(filter(('null').__ne__,routes))
-    print(strippedRoutes)
+    #print(strippedRoutes)
+    routes_huer = strippedRoutes
 
-def mergeRoutes(routeA,routeB,nodeA,nodeB,locationA,locationB):
-    global routes
+    elapsed = time.clock() - start
+    print(elapsed)
 
-    # merge a into b
-    # if A is on the left
-    if nodeA == routes[routeA][1]:
-        # if b is on the right
-        if nodeB == routes[routeB][-3]:
-            #print("al,br")
-            j = 0
-            while j <= len(routes[routeA])-4:
-                routes[routeB].insert(locationB+1+j,routes[routeA][locationA+j])
-                #print(routes)
-                j += 1
-            routes[routeB][-1] += routes[routeA][-1]
-            routes[routeA] = 'null'
-            #print(routes[routeB])
 
-        #if b is on the left
-        elif nodeB == routes[routeB][1]:
-            #print("aL,bL")
-            j = 0
-            while j <= len(routes[routeA]) - 4:
-                routes[routeB].insert(1, routes[routeA][locationA + j])
-                #print(routes)
-                j += 1
-            routes[routeB][-1] += routes[routeA][-1]
-            routes[routeA] = 'null'
-            #print(routes[routeB])
-
-    # if A is on the right
-    if nodeA == routes[routeA][-3]:
-        #if b is on the right
-        if nodeB == routes[routeB][-3]:
-            #print("aR,bR")
-            j = 0
-            while j <= len(routes[routeA])-4:
-                routes[routeB].insert(locationB+1+j,routes[routeA][locationA-j])
-                #print(routes)
-                j += 1
-            routes[routeB][-1] += routes[routeA][-1]
-            routes[routeA] = 'null'
-            #print(routes[routeB])
-        #if b is on the left
-        elif nodeB == routes[routeB][1]:
-            #print("aR,bL")
-            j = 0
-            #print(routeA)
-            while j <= len(routes[routeA])-4:
-                routes[routeB].insert(1,routes[routeA][locationA-j])
-                j += 1
-            routes[routeB][-1] += routes[routeA][-1]
-            routes[routeA] = 'null'
-            #print(routes[routeB])
 
 
     #print(routes)
 
 
-def mergeFeasibility(routes,nodeA,nodeB,routeA,routeB):
-    global capacityLimit
-
-    #if not in same route
-    if routeA != routeB:
-        if routes[routeA] != "null" and routes[routeB] != "null":
-            #if capacity of the 2 routes is under the limit
-            if int(routes[routeA][-1]) + int(routes[routeB][-1]) <= capacityLimit:
-                #if node a is at the start or end
-                if routes[routeA][1] == nodeA or routes[routeA][-3] == nodeA:
-                    #if node b is at the start or end
-                    if routes[routeB][1] == nodeB or routes[routeB][-3] == nodeB:
-
-                        return True
-
-    return False
-
-
 def metaheuristic(system):
 
-    def distance(x1, y1, x2, y2):
-        # Manhattan distance
-        dist = abs(x1 - x2) + abs(y1 - y2)
-
-        return dist
 
     class CreateDistanceCallback(object):
         """Create callback to calculate distances between points."""
@@ -315,7 +294,7 @@ def metaheuristic(system):
                     y1 = locations[from_node][1]
                     x2 = locations[to_node][0]
                     y2 = locations[to_node][1]
-                    self.matrix[from_node][to_node] = distance(x1, y1, x2, y2)
+                    self.matrix[from_node][to_node] = manDistance(x1, y1, x2, y2)
 
         def Distance(self, from_node, to_node):
             return self.matrix[from_node][to_node]
@@ -331,6 +310,7 @@ def metaheuristic(system):
             return self.matrix[from_node]
 
     def tabu():
+        start = time.clock()
         global routes_meta
         routes_meta = []
         # Create the data.
@@ -450,6 +430,10 @@ def metaheuristic(system):
         else:
             print('Specify an instance greater than 0.')
 
+        elapsed = time.clock() - start
+
+        print(elapsed)
+
     def create_data_array():
         locations = []
 
@@ -482,9 +466,7 @@ def metaheuristic(system):
 def exact(system):
 
     def distance(x1, y1, x2, y2):
-        # Manhattan distance
-        dist = abs(x1 - x2) + abs(y1 - y2)
-
+        dist = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
         return dist
 
     class CreateDistanceCallback(object):
@@ -502,7 +484,7 @@ def exact(system):
                     y1 = locations[from_node][1]
                     x2 = locations[to_node][0]
                     y2 = locations[to_node][1]
-                    self.matrix[from_node][to_node] = distance(x1, y1, x2, y2)
+                    self.matrix[from_node][to_node] = manDistance(x1, y1, x2, y2)
 
         def Distance(self, from_node, to_node):
             return self.matrix[from_node][to_node]
@@ -518,6 +500,7 @@ def exact(system):
             return self.matrix[from_node]
 
     def exact():
+        start = time.clock()
         global routes_exact
         routes_exact = []
         # Create the data.
@@ -635,6 +618,10 @@ def exact(system):
         else:
             print('Specify an instance greater than 0.')
 
+        elapsed = time.clock() - start
+
+        print(elapsed)
+
     def create_data_array():
         locations = []
 
@@ -663,15 +650,7 @@ def exact(system):
         return data
     exact()
 
-def calcDist(x1,y1,x2,y2):
-    calc1 = int(x1) - int(x2)
-    calc2 = int(y1) - int(y2)
 
-    calc = calc1**2 + calc2**2
-
-    calc = math.sqrt(calc)
-
-    return calc
 
 '''
 def metaheuristic(system):
@@ -704,7 +683,7 @@ root = Tk()
 b = Button(root, text="Open VRP File", command=openFile)
 b.pack()
 capacityLimit = 0
-routes = []
+routes_huer = []
 routes_meta = []
 routes_exact = []
 root.mainloop()
