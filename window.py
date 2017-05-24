@@ -1,6 +1,6 @@
 # window gui abstraction
-
 from tkinter import *
+
 
 class Window(Frame):
 
