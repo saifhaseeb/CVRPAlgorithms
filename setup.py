@@ -2,6 +2,8 @@ from tkinter import *
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 
+# main base window
+
 
 class Base(Frame):
 
