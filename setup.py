@@ -1,4 +1,6 @@
 from tkinter import *
+from tkinter import ttk
+from tkinter.scrolledtext import ScrolledText
 
 
 class Base(Frame):
@@ -24,8 +26,25 @@ def centerwindow(w, h):
 
     root.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
+
 root = Tk()
 root.title('CVRP Algorithms')
+nb = ttk.Notebook(root)
+
+# first page, which would get widgets gridded into it
+page1 = ttk.Frame(nb)
+
+# second page
+page2 = ttk.Frame(nb)
+page3 = ttk.Frame(nb)
+text = ScrolledText(page2)
+text.pack(expand=1, fill="both")
+
+nb.add(page1, text='Clarke-Wright')
+nb.add(page2, text='Tabu Search')
+nb.add(page3, text='Exact Solver')
+
+nb.pack(expand=1, fill="both")
 centerwindow(800, 650)
 app = Base(root)
 root.mainloop()
