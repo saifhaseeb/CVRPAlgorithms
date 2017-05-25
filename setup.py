@@ -128,6 +128,8 @@ page1 = ttk.Frame(nb)
 # adding more pages and titles for them
 page2 = ttk.Frame(nb)
 page3 = ttk.Frame(nb)
+
+# labels for top of screen
 mainlabel = ttk.Label(root, text="FIT3036 Computer Science Project")
 main2label = ttk.Label(root, text="This program takes an input of TSPLIB files and will give a solution to the CVRP problem")
 main3label = ttk.Label(root, text="You can choose from a selection of algorithms: heuristic, metaheuristic and exact solver")
@@ -158,6 +160,16 @@ b.pack()
 # quit button for entire program
 tkButtonQuit = Button(root, text="Quit", command=quit)
 tkButtonQuit.pack()
+
+# instruction labels
+inslabel = ttk.Label(root, text="Instructions: ")
+inslabel2 = ttk.Label(root, text="1. Open a VRP file (samples given in project directory)")
+inslabel3 = ttk.Label(root, text="2. Choose an algorithm from the tabs and then click 'Run")
+inslabel4 = ttk.Label(root, text="3. Results are shown in respective tabs")
+inslabel.pack()
+inslabel2.pack()
+inslabel3.pack()
+inslabel4.pack()
 
 # center the window to middle of screen and run program
 centerwindow(800, 650)
