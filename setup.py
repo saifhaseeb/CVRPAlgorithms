@@ -4,13 +4,12 @@ from tkinter.filedialog import askopenfilename
 from tkinter import messagebox
 import os.path
 import math
-import main
+import time
+import itertools
 
-from tkinter.scrolledtext import ScrolledText
-
-# main base window
-# [depot, ......., capacity]
-
+from main import heuristic
+from main import metaheuristic
+from main import exact
 
 class Base(Frame):
 
@@ -35,24 +34,9 @@ def centerwindow(w, h):
 
     root.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
-# emtpy modules for design
-
-
-
 def getNum(text):
     return int(''.join(ele for ele in text if ele.isdigit() or ele == '.'))
 
-def findLargestNumber(text):
-    ls = list()
-    for w in text.split():
-        try:
-            ls.append(int(w))
-        except:
-            pass
-    try:
-        return max(ls)
-    except:
-        return None
 
 def buildCoords(content,totalnodes):
 
@@ -69,9 +53,11 @@ def buildCoords(content,totalnodes):
     i = 0
     while i < totalnodes:
         x=content[k+i].split()
-        system[i].append(x[1])
-        i += 1
 
+        if len(system[i]) == 3:
+            system[i].append(0)
+        system[i][3] = x[1]
+        i += 1
     return system
 
 def getDemand(content):
@@ -97,9 +83,7 @@ def calcRouteDist(route,system):
     totalDist = 0
     for i in range(0,len(route)):
         for j in range(0,len(route[i])-2):
-            #print('i:' + str(i))
-            #print('j' + str(j))
-            #print('route: ' + str(route[i][j]))
+
             x1 = system[route[i][j]-1][1]
             y1 = system[route[i][j]-1][2]
             x2 = system[route[i][j+1]-1][1]
@@ -107,12 +91,43 @@ def calcRouteDist(route,system):
 
             totalDist += eucDistance(x1,y1,x2,y2)
 
-    print(totalDist)
+    return totalDist
 
+def routeListToString(route):
+
+    time = route.pop()
+    dist = route.pop()
+
+    routestring = []
+
+
+    for i in range(len(route)):
+        string = "Route " + str(i+1) +"\n"
+
+        string += str(route[i][0])
+        for j in range(0,len(route[i])-2):
+            string += " -> " + str(route[i][j+1])
+
+        string += " | Truck capacity = " + str(route[i][-1]) + "\n\n"
+        routestring.append(str(string))
+
+    time = '\n' + "Total time taken: " + str(time)
+
+    dist = '\n' + "Total Distance: " + str(dist)
+
+    routestring.append(str(time))
+    routestring.append(str(dist))
+
+    a = list(itertools.chain.from_iterable(routestring))
+
+    x = "".join(a)
+
+    return x
 
 def openFile():
     global system
     global capacityLimit
+
 
     filename = askopenfilename(parent=root)
     extension = os.path.splitext(filename)[1][1:]
@@ -125,37 +140,62 @@ def openFile():
             content = f.readlines()
 
         content = [x.strip() for x in content]
-        #print(content)
+
         totalnodes = getNum(content[3])
         capacityLimit = getNum(content[5])
-        print(capacityLimit)
+
+        system = []
         system = buildCoords(content, totalnodes)
-        print(system)
 
-def heuristic():
-    global system
-    main.heuristic(system)
-    print(routes_heur)
-    calcRouteDist(routes_heur, system)
-    #return 0
+def heuristic_setup():
+    if len(system) == 0:
+        print("no files selected")
+        return 0
 
-def metaheuristic():
-    main.metaheuristic(system)
+    start = time.clock()
+    routes_heur = heuristic(system,capacityLimit)
+    elapsed = time.clock() - start
+    dist = calcRouteDist(routes_heur, system)
+    routes_heur.append(dist)
+    routes_heur.append(elapsed)
+
+    x = routeListToString(routes_heur)
+
+    print(x)
+
+def metaheuristic_setup():
+    if len(system) == 0:
+        print("no files selected")
+        return 0
+
+    start = time.clock()
+    routes_meta = metaheuristic(system, capacityLimit)
+    elapsed = time.clock() - start
+
+    dist = calcRouteDist(routes_meta, system)
+    routes_meta.append(dist)
+    routes_meta.append(elapsed)
+
     print(routes_meta)
-    calcRouteDist(routes_meta, system)
-    #return 0
 
-def exact():
-    main.exact(system)
-    calcRouteDist(routes_exact, system)
+def exact_setup():
+
+    if len(system) == 0:
+        print("no files selected")
+        return 0
+
+    start = time.clock()
+    routes_exact = exact(system, capacityLimit)
+    elapsed = time.clock() - start
     print(routes_exact)
-    #return 0
+    dist = calcRouteDist(routes_exact, system)
+    routes_exact.append(dist)
+    routes_exact.append(elapsed)
+
+    print(routes_exact)
 
 # set up global vars
 capacityLimit = 0
-routes_heur = []
-routes_meta = []
-routes_exact = []
 system = []
 
 # create base window root and notebook widget instance
@@ -176,6 +216,15 @@ nb.add(page3, text='Exact Solver')
 nb.pack(expand=1, fill="both")
 
 
+# buttons for running algorithms in tabs
+heuristicLaunch = Button(page1, text="Run heuristic algorithm", command=heuristic_setup)
+metaHeuristicLaunch = Button(page2, text="Run metaheuristic algorithm", command=metaheuristic_setup)
+exactSolverLaunch = Button(page3, text="Run exact solver algorithm", command=exact_setup)
+heuristicLaunch.pack()
+metaHeuristicLaunch.pack()
+exactSolverLaunch.pack()
+
+
 # button to open a file
 b = Button(root, text="Open VRP File", command=openFile)
 b.pack()
@@ -185,14 +234,6 @@ b.pack()
 tkButtonQuit = Button(root, text="Quit", command=quit)
 tkButtonQuit.pack()
 
-
-# buttons for running algorithms in tabs
-heuristicLaunch = Button(page1, text="Run heuristic algorithm", command=heuristic())
-metaHeuristicLaunch = Button(page2, text="Run metaheuristic algorithm", command=metaheuristic())
-exactSolverLaunch = Button(page3, text="Run exact solver algorithm", command=exact())
-heuristicLaunch.pack()
-metaHeuristicLaunch.pack()
-exactSolverLaunch.pack()
 
 
 # center the window to middle of screen and run program
