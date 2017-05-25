@@ -24,28 +24,43 @@ class Base(Frame):
         self.parent.title('CVRP Algorithms')
         self.pack(fill=BOTH, expand=1)
 
-
-def centerwindow(w, h):
-
-    ws = root.winfo_screenwidth()  # width of the screen
-    hs = root.winfo_screenheight()  # height of the screen
-
-    x = (ws / 2) - (w / 2)
-    y = (hs / 2) - (h / 2)
-
-    root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+#opens the file and loads it
+def openFile():
+    global rootlabel
+    global nodeSystem
+    global capacityLimit
 
 
-def getNum(text):
+    filename = askopenfilename(parent=root)
+    extension = os.path.splitext(filename)[1][1:]
+
+    if extension == '':
+        messagebox.showinfo("Error", "No file chosen, please click on a valid test file")
+
+    else:
+        with open(filename) as f:
+            importData = f.readlines()
+
+        importData = [x.strip() for x in importData]
+
+        totalnodes = getValue(importData[3])
+        capacityLimit = getValue(importData[5])
+
+        nodeSystem = []
+        nodeSystem = buildCoords(importData, totalnodes)
+
+
+
+def getValue(text):
     return int(''.join(ele for ele in text if ele.isdigit() or ele == '.'))
 
-
+#builds the coordinate system
 def buildCoords(content,totalnodes):
 
     i = 0
     while i < totalnodes:
         x=content[7+i].split()
-        system.append(x)
+        nodeSystem.append(x)
         i += 1
 
     k = getDemand(content)
@@ -56,11 +71,11 @@ def buildCoords(content,totalnodes):
     while i < totalnodes:
         x=content[k+i].split()
 
-        if len(system[i]) == 3:
-            system[i].append(0)
-        system[i][3] = x[1]
+        if len(nodeSystem[i]) == 3:
+            nodeSystem[i].append(0)
+        nodeSystem[i][3] = x[1]
         i += 1
-    return system
+    return nodeSystem
 
 def getDemand(content):
     i = 0
@@ -80,6 +95,7 @@ def manDistance(x1, y1, x2, y2):
 
     return dist
 
+#calculates the
 def calcRouteDist(route,system):
 
     totalDist = 0
@@ -100,7 +116,7 @@ def routeListToString(route):
     time = route.pop()
     dist = route.pop()
 
-    routestring = []
+    output_string = []
 
 
     for i in range(len(route)):
@@ -111,188 +127,191 @@ def routeListToString(route):
             string += " -> " + str(route[i][j+1])
 
         string += " | Truck capacity = " + str(route[i][-1]) + "\n\n"
-        routestring.append(str(string))
+        output_string.append(str(string))
 
     time = '\n' + "Total time taken: " + str(time)
 
     dist = '\n' + "Total Distance: " + str(dist)
 
-    routestring.append(str(time))
-    routestring.append(str(dist))
+    output_string.append(str(time))
+    output_string.append(str(dist))
 
-    a = list(itertools.chain.from_iterable(routestring))
+    a = list(itertools.chain.from_iterable(output_string))
 
     x = "".join(a)
 
     return x
 
-def openFile():
-    global rootlabel
-    global system
-    global capacityLimit
+def centerwindow(width, height):
 
+    screen_width = root.winfo_screenwidth()  # width of the screen
+    screen_heights = root.winfo_screenheight()  # height of the screen
 
-    filename = askopenfilename(parent=root)
-    extension = os.path.splitext(filename)[1][1:]
+    x = (screen_width / 2) - (width / 2)
+    y = (screen_heights / 2) - (height / 2)
 
-    if extension == '':
-        messagebox.showinfo("Error", "No file chosen, please click on a valid test file")
-
-    else:
-        with open(filename) as f:
-            content = f.readlines()
-
-        content = [x.strip() for x in content]
-
-        totalnodes = getNum(content[3])
-        capacityLimit = getNum(content[5])
-
-        system = []
-        system = buildCoords(content, totalnodes)
+    root.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
 
 def heuristic_setup():
-    if len(system) == 0:
-        print("no files selected")
+    if len(nodeSystem) == 0:
+        print("Please select a file")
         return 0
 
     start = time.clock()
-    routes_heur = heuristic(system,capacityLimit)
+    heurRoutes = heuristic(nodeSystem, capacityLimit)
     elapsed = time.clock() - start
-    dist = calcRouteDist(routes_heur, system)
-    routes_heur.append(dist)
-    routes_heur.append(elapsed)
+    dist = calcRouteDist(heurRoutes, nodeSystem)
+    heurRoutes.append(dist)
+    heurRoutes.append(elapsed)
 
-    x = routeListToString(routes_heur)
+    x = routeListToString(heurRoutes)
 
     editArea1.insert(END, '\n')
     editArea1.insert(END, x)
 
 def metaheuristic_setup():
-    if len(system) == 0:
-        print("no files selected")
+    if len(nodeSystem) == 0:
+        print("Please select a file")
         return 0
 
     start = time.clock()
-    routes_meta = metaheuristic(system, capacityLimit)
+    metaRoutes = metaheuristic(nodeSystem, capacityLimit)
     elapsed = time.clock() - start
 
-    dist = calcRouteDist(routes_meta, system)
-    routes_meta.append(dist)
-    routes_meta.append(elapsed)
+    dist = calcRouteDist(metaRoutes, nodeSystem)
+    metaRoutes.append(dist)
+    metaRoutes.append(elapsed)
 
-    x = routeListToString(routes_meta)
+    x = routeListToString(metaRoutes)
 
     editArea2.insert(END, '\n')
     editArea2.insert(END, x)
 
 def exact_setup():
 
-    if len(system) == 0:
-        print("no files selected")
+    if len(nodeSystem) == 0:
+        print("Please select a file")
         return 0
 
     start = time.clock()
-    routes_exact = exact(system, capacityLimit)
+    exactRoutes = exact(nodeSystem, capacityLimit)
     elapsed = time.clock() - start
 
-    dist = calcRouteDist(routes_exact, system)
-    routes_exact.append(dist)
-    routes_exact.append(elapsed)
+    dist = calcRouteDist(exactRoutes, nodeSystem)
+    exactRoutes.append(dist)
+    exactRoutes.append(elapsed)
 
-    x = routeListToString(routes_exact)
+    x = routeListToString(exactRoutes)
 
     editArea3.insert(END, '\n')
     editArea3.insert(END, x)
 
 # set up global vars
 capacityLimit = 0
-system = []
+nodeSystem = []
 
-# create base window root and notebook widget instance
+
+
+
 root = Tk()
 root.title('CVRP Algorithms')
-nb = ttk.Notebook(root)
-
-# first page, which would get widgets gridded into it
-page1 = ttk.Frame(master = nb)
-
-# adding more pages and titles for them
-page2 = ttk.Frame(nb)
-page3 = ttk.Frame(nb)
-
-nb.add(page1, text='Clarke-Wright')
-nb.add(page2, text='Tabu Search')
-nb.add(page3, text='Exact Solver')
-nb.pack(expand=1, fill="both",side='top')
+notebook = ttk.Notebook(root)
 
 
-# quit button for entire program
-tkButtonQuit = Button(page1, text="Quit", command=quit)
-tkButtonQuit.pack(side = 'bottom')
-
-tkButtonQuit = Button(page2, text="Quit", command=quit)
-tkButtonQuit.pack(side = 'bottom')
-
-tkButtonQuit = Button(page3, text="Quit", command=quit)
-tkButtonQuit.pack(side = 'bottom')
-
-# button to open a file
-b = Button(page1, text="Open VRP File", command=openFile)
-b.pack(side = 'bottom')
-
-b = Button(page2, text="Open VRP File", command=openFile)
-b.pack(side = 'bottom')
-
-b = Button(page3, text="Open VRP File", command=openFile)
-b.pack(side = 'bottom')
 
 
-# buttons for running algorithms in tabs
-heuristicLaunch = Button(page1, text="Run heuristic algorithm", command=heuristic_setup)
-metaHeuristicLaunch = Button(page2, text="Run metaheuristic algorithm", command=metaheuristic_setup)
-exactSolverLaunch = Button(page3, text="Run exact solver algorithm", command=exact_setup)
-heuristicLaunch.pack(side = 'bottom')
-metaHeuristicLaunch.pack(side = 'bottom')
-exactSolverLaunch.pack(side = 'bottom')
 
 
-#page 1
+tab1 = ttk.Frame(master = notebook)
+tab2 = ttk.Frame(notebook)
+tab3 = ttk.Frame(notebook)
+
+bar1 = Frame(tab1)
+bar2 = Frame(tab2)
+bar3 = Frame(tab3)
+
+
+
+notebook.add(tab1, text='Heuristic')
+notebook.add(tab2, text='Meta-heuristic ')
+notebook.add(tab3, text='Exact')
+notebook.pack(expand=1, fill="both", side='top')
+
+
+
+bar1.pack()
+bar2.pack()
+bar3.pack()
+
+heuristic_button = Button(bar1, text="Run heuristic solver", command=heuristic_setup)
+metaHeuristic_button = Button(bar2, text="Run metaheuristic solver", command=metaheuristic_setup)
+exactSolver_button = Button(bar3, text="Run exact solver ", command=exact_setup)
+
+
+heuristic_button.pack(side ='left')
+metaHeuristic_button.pack(side ='left')
+exactSolver_button.pack(side ='left')
+
+
+
+
+open_fileButton = Button(bar1, text="Open VRP File", command=openFile)
+open_fileButton.pack(side ='left')
+
+open_fileButton = Button(bar2, text="Open VRP File", command=openFile)
+open_fileButton.pack(side ='left')
+
+open_fileButton = Button(bar3, text="Open VRP File", command=openFile)
+open_fileButton.pack(side ='left')
+
+
+quit_button = Button(bar1, text="Quit", command=quit)
+quit_button.pack(side ='left')
+
+quit_button = Button(bar2, text="Quit", command=quit)
+quit_button.pack(side ='left')
+
+quit_button = Button(bar3, text="Quit", command=quit)
+quit_button.pack(side ='left')
+
+
+#text box page 1
 editArea1 = tkst.ScrolledText(
-    master = page1,
+    master = tab1,
     width  = 20,
     height = 10,
     bg = '#ffffff'
 )
 editArea1.pack(padx=10, pady=10, expand=True, fill = "both" ,side = "top")
-editArea1.insert(END,'Welcome to my FIT3036 project. Please press select file to input a cvrp problem')
+editArea1.insert(END,'Welcome to my FIT3036 project. Please press select a vrp file by pressing the button bellow')
 
 
-#page 1
+#text box page 2
 editArea2 = tkst.ScrolledText(
-    master = page2,
+    master = tab2,
     width  = 20,
     height = 10,
     bg = '#ffffff'
 )
 editArea2.pack(padx=10, pady=10, expand=True, fill = "both" ,side = "top")
-editArea2.insert(END,'This page is for the Tabu Search')
+editArea2.insert(END,'This page is for the Tabu Solver')
 
-#page 1
+#text box page 3
 editArea3 = tkst.ScrolledText(
-    master = page3,
+    master = tab3,
     width  = 20,
     height = 10,
     bg = '#ffffff'
 )
 editArea3.pack(padx=10, pady=10, expand=True, fill = "both" ,side = "top")
-editArea3.insert(END,'This page is for Exact Algorithm')
+editArea3.insert(END,'This page is for Exact solver')
+
+bar = Frame(root)
 
 
 
 
-
-# center the window to middle of screen and run program
 centerwindow(1000, 600)
 app = Base(root)
 root.mainloop()

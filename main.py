@@ -1,5 +1,14 @@
-import time
-#import setup
+'''
+This program provides 3 different algorithms that solve the CVRP
+The input has to be of .vrp type
+
+The methods for the meta heuristic, and exact algorithms use the OR-Tools library
+The structure of the code was taken from an example from the or-tools website
+at: https://developers.google.com/optimization/routing/tsp/vehicle_routing
+
+
+'''
+
 import operator
 import math
 from ortools.constraint_solver import pywrapcp
@@ -7,6 +16,7 @@ from ortools.constraint_solver import routing_enums_pb2
 
 
 def eucDistance(x1, y1, x2, y2):
+    # euclidean distance
     dist = math.sqrt((int(x2) - int(x1)) ** 2 + (int(y2) - int(y1)) ** 2)
     return dist
 
@@ -17,8 +27,17 @@ def manDistance(x1, y1, x2, y2):
     return dist
 
 def heuristic(system,capacityLimit):
+    '''
+    
+    This method uses the clarke wright algorithm. 
+    First it calculates the savings matrix, sorts it and picks off the top
+    The feasability of the merge is then checked,
+    If it is allowed, the routes are merged together
+         
+    '''
 
-    def mergeFeasibility(routes, nodeA, nodeB, routeA, routeB):
+    #checks if the merge is allowed
+    def checkMerge(routes, nodeA, nodeB, routeA, routeB):
 
         # if not in same route
         if routeA != routeB:
@@ -33,7 +52,8 @@ def heuristic(system,capacityLimit):
 
         return False
 
-    def mergeRoutes(routes, routeA, routeB, nodeA, nodeB, locationA, locationB):
+    # merges the routes
+    def routeMerging(routes, routeA, routeB, nodeA, nodeB, locationA, locationB):
 
         # merge a into b
         # if A is on the left
@@ -91,12 +111,12 @@ def heuristic(system,capacityLimit):
     depotX = system[0][1]
     depotY = system[0][2]
 
-    k = len(system)
+    amount_of_loads = len(system)
 
     i = 2
     routes = []
 
-    while i <= k:
+    while i <= amount_of_loads:
         x = [1,i,1,int(system[i-1][3])]
         routes.append(x)
         i += 1
@@ -104,11 +124,11 @@ def heuristic(system,capacityLimit):
     savings = []
 
     i = 1
-    while i <= k+1:
+    while i <= amount_of_loads+1:
 
         j = i+1
 
-        while j < k:
+        while j < amount_of_loads:
             nodeix = system[i][1]
             nodeiy = system[i][2]
             nodejx = system[j][1]
@@ -121,11 +141,12 @@ def heuristic(system,capacityLimit):
 
             savingscalc = d1 + d2 - d3
 
-            x = [i+1,j+1,savingscalc]
-            savings.append(x)
-
+            temp = [i+1,j+1,savingscalc]
+            savings.append(temp)
             j += 1
         i += 1
+
+
 
     savings.sort(key=operator.itemgetter(2),reverse=True)
 
@@ -155,9 +176,9 @@ def heuristic(system,capacityLimit):
         routeA = int(routeA)
         routeB = int(routeB)
 
-        if mergeFeasibility(routes,nodeA,nodeB,routeA,routeB):
+        if checkMerge(routes, nodeA, nodeB, routeA, routeB):
 
-            mergeRoutes(routes,routeA,routeB,nodeA,nodeB,locationA,locationB)
+            routeMerging(routes,routeA,routeB,nodeA,nodeB,locationA,locationB)
 
 
         i += 1
@@ -171,6 +192,11 @@ def heuristic(system,capacityLimit):
 
 
 def metaheuristic(system,capacityLimit):
+
+    '''
+    This method uses or-tools
+     The code structure was taken from an example on the or-website: https://developers.google.com/optimization/routing/tsp/vehicle_routing
+    '''
 
     routes = []
 
@@ -210,7 +236,7 @@ def metaheuristic(system,capacityLimit):
 
         # Create the data.
         data = create_data_array()
-        #print(data)
+
         locations = data[0]
         demands = data[1]
         num_locations = len(locations)
@@ -221,7 +247,7 @@ def metaheuristic(system,capacityLimit):
         if num_locations > 0:
             routing = pywrapcp.RoutingModel(num_locations, num_vehicles, depot)
             search_parameters = pywrapcp.RoutingModel.DefaultSearchParameters()
-            # print(routing)
+
 
             # Setting first solution heuristic: the
             # method for finding a first solution to the problem.
@@ -234,7 +260,6 @@ def metaheuristic(system,capacityLimit):
 
             search_parameters.time_limit_ms = 30000
 
-            # print(search_parameters)
 
             # The 'PATH_CHEAPEST_ARC' method does the following:
             # Starting from a route "start" node, connect it to the node which produces the
@@ -266,7 +291,6 @@ def metaheuristic(system,capacityLimit):
             if assignment:
                 # Display solution.
                 # Solution cost.
-                #print("\nTotal distance of all routes: " + str(assignment.ObjectiveValue()) + "\n")
 
                 for vehicle_nbr in range(num_vehicles):
                     index = routing.Start(vehicle_nbr)
@@ -309,16 +333,10 @@ def metaheuristic(system,capacityLimit):
                         h -= 1
                     h += 1
 
-
-
-
             else:
                 print('No solution found.')
         else:
             print('Specify an instance greater than 0.')
-
-
-
 
 
     def create_data_array():
@@ -353,6 +371,10 @@ def metaheuristic(system,capacityLimit):
 
 
 def exact(system,capacityLimit):
+    '''
+        This method uses or-tools
+         The code structure was taken from an example on the or-website: https://developers.google.com/optimization/routing/tsp/vehicle_routing
+    '''
     routes_exact = []
 
     def distance(x1, y1, x2, y2):
