@@ -36,7 +36,7 @@ def centerwindow(w, h):
 # emtpy modules for design
 
 def heuristic():
-    return 0
+   print('rajan')
 
 def metaheuristic():
     return 0
@@ -128,11 +128,28 @@ page1 = ttk.Frame(nb)
 # adding more pages and titles for them
 page2 = ttk.Frame(nb)
 page3 = ttk.Frame(nb)
+mainlabel = ttk.Label(root, text="FIT3036 Computer Science Project")
+main2label = ttk.Label(root, text="This program takes an input of TSPLIB files and will give a solution to the CVRP problem")
+main3label = ttk.Label(root, text="You can choose from a selection of algorithms: heuristic, metaheuristic and exact solver")
+mainlabel.pack()
+main2label.pack()
+main3label.pack()
 
 nb.add(page1, text='Clarke-Wright')
 nb.add(page2, text='Tabu Search')
 nb.add(page3, text='Exact Solver')
 nb.pack(expand=1, fill="both")
+
+# buttons for running algorithms in tabs
+heuristicLaunch = Button(page1, text="Run Clark-Wright algorithm", command=heuristic)
+metaHeuristicLaunch = Button(page2, text="Run Tabu Search algorithm", command=metaheuristic)
+exactSolverLaunch = Button(page3, text="Run Exact Solver", command=exact)
+heuristicLaunch.pack()
+metaHeuristicLaunch.pack()
+exactSolverLaunch.pack()
+
+page1label = ttk.Label(page1, text="HELLO")
+page1label.pack()
 
 # button to open a file
 b = Button(root, text="Open VRP File", command=openFile)
@@ -141,14 +158,6 @@ b.pack()
 # quit button for entire program
 tkButtonQuit = Button(root, text="Quit", command=quit)
 tkButtonQuit.pack()
-
-# buttons for running algorithms in tabs
-heuristicLaunch = Button(page1, text="Run heuristic algorithm", command=heuristic())
-metaHeuristicLaunch = Button(page2, text="Run metaheuristic algorithm", command=metaheuristic())
-exactSolverLaunch = Button(page3, text="Run exact solver algorithm", command=exact())
-heuristicLaunch.pack()
-metaHeuristicLaunch.pack()
-exactSolverLaunch.pack()
 
 # center the window to middle of screen and run program
 centerwindow(800, 650)
